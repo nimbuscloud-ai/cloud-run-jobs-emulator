@@ -10,7 +10,7 @@ Credit to [@kurtschwarz](https://github.com/kurtschwarz) for [the original imple
 
 ### Docker Compose
 
-To use this emulator with `docker compose` you'll need to add it as a service and create a `cloud-run-jobs-config.yaml` file.
+To use this emulator with `docker compose` you'll need to add it as a service. To specify images in advance as job definitions, create a `cloud-run-jobs-config.yaml` file.
 
 ```yaml
 services:
@@ -36,3 +36,5 @@ jobs:
   another-great-job:
     image: my-docker-image:tag
 ```
+
+Otherwise, you can use the [Cloud Run Jobs Client Library](https://cloud.google.com/nodejs/docs/reference/run/latest/run/v2.jobsclient#_google_cloud_run_v2_JobsClient_createJob_member_1_) to set up jobs dynamically (e.g. via a script) by pointing your client to the port of the running emulator.
