@@ -4,6 +4,8 @@ This emulator tries to emulate the behaviour of [Cloud Run Jobs](https://cloud.g
 
 **This project is not associated with Google.**
 
+Credit to [@kurtschwarz](https://github.com/kurtschwarz) for [the original implementation](https://github.com/kurtschwarz/cloud-run-jobs-emulator), which this is based on.
+
 ## Usage
 
 ### Docker Compose
@@ -13,7 +15,7 @@ To use this emulator with `docker compose` you'll need to add it as a service an
 ```yaml
 services:
   cloud-run-jobs-emulator:
-    image: ghcr.io/kurtschwarz/cloud-run-jobs-emulator:latest
+    image: nimbuscloud-ai/cloud-run-jobs-emulator:latest
     configs:
       - source: cloud-run-jobs-config
         target: /cloud-run-jobs-config.yaml

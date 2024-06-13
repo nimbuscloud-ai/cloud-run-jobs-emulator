@@ -8,12 +8,13 @@ export const docker = new Docker()
 
 export const streamContainerLogs = async (
   container: Container,
-  logger: pino.Logger = getLogger(Logger.Job),
+  logger: pino.Logger = getLogger(Logger.Execution),
+  executionName: string
 ): Promise<void> => {
   const stream = new PassThrough()
 
   stream.on('data', (chunk) => {
-    logger.info(chunk.toString('utf8').trim())
+    logger.info(`[${executionName}] ${chunk.toString('utf8').trim()}`)
   })
 
   const logs = await container.logs({

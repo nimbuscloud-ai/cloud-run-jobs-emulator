@@ -1,6 +1,7 @@
 import { Server, ServerCredentials, ServiceDefinition, UntypedServiceImplementation } from '@grpc/grpc-js'
 
-import { JobsService, jobsServiceDefinitions } from '@services/jobs-service'
+import { ExecutionsService, executionsServiceDefinitions } from '@services/executions/service'
+import { JobsService, jobsServiceDefinitions } from '@services/jobs/service'
 import { getConfig } from '@utils/config'
 
 export const initializeServer = (): Server => {
@@ -10,6 +11,12 @@ export const initializeServer = (): Server => {
     // GrpcObject does not like the nested namespace
     (jobsServiceDefinitions.google as any).cloud.run.v2.Jobs.service as ServiceDefinition<UntypedServiceImplementation>,
     JobsService,
+  )
+
+  server.addService(
+    // GrpcObject does not like the nested namespace
+    (executionsServiceDefinitions.google as any).cloud.run.v2.Executions.service as ServiceDefinition<UntypedServiceImplementation>,
+    ExecutionsService,
   )
 
   return server

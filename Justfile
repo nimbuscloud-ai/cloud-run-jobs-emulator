@@ -9,7 +9,7 @@ docker-bin  := `which docker ||:`
 docker-args := ""
 docker      := docker-bin + " " + docker-args
 
-docker-image-name := "ghcr.io/kurtschwarz/cloud-run-jobs-emulator"
+docker-image-name := "nimbuscloud-ai/cloud-run-jobs-emulator"
 docker-image-tag  := "latest"
 
 env-check:

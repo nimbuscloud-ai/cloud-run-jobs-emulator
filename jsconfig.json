@@ -2,9 +2,16 @@
   "compilerOptions": {
     "baseUrl": "src/",
     "paths": {
-      "@clients/*": ["clients/*"],
-      "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"]
-    }
+      "@clients/*": [
+        "clients/*"
+      ],
+      "@services/*": [
+        "services/*"
+      ],
+      "@utils/*": [
+        "utils/*"
+      ]
+    },
+    "strictNullChecks": true
   }
 }

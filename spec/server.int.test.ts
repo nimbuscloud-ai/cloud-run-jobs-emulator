@@ -2,14 +2,12 @@ import { Server } from '@grpc/grpc-js'
 import { v2 } from '@google-cloud/run'
 
 import { initializeServer, shutdownServer, startServer } from '../src/server'
-import { docker } from '../src/utils/docker'
 import { Config, getConfig } from '../src/utils/config'
-import { getLogger } from '@utils/logger'
 
 describe('JobsService', () => {
   let config: Config
-  let server: Server
-  let client: v2.JobsClient
+  let server: Server | undefined
+  let client: v2.JobsClient | undefined
 
   beforeEach(async () => {
     config = getConfig()
@@ -24,17 +22,21 @@ describe('JobsService', () => {
   })
 
   afterEach(async () => {
-    await shutdownServer(server)
-    server = undefined
+    if (server) {
+      await shutdownServer(server)
+      server = undefined
+    }
 
-    await client.close()
-    client = undefined
+    if (client) {
+      await client.close()
+      client = undefined
+    }
   })
 
   describe('RunJob', () => {
     it('throws an error when an non-existent job name is given', async () => {
       delete config.jobs['this-job-does-not-exist']
-      await expect(client.runJob({ name: 'this-job-does-not-exist' })).rejects.toThrow()
+      await expect(client?.runJob({ name: 'this-job-does-not-exist' })).rejects.toThrow()
     })
   })
 })
