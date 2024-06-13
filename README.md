@@ -15,7 +15,7 @@ To use this emulator with `docker compose` you'll need to add it as a service. T
 ```yaml
 services:
   cloud-run-jobs-emulator:
-    image: nimbuscloud-ai/cloud-run-jobs-emulator:latest
+    image: mattkindynimbus/cloud-run-jobs-emulator:latest
     configs:
       - source: cloud-run-jobs-config
         target: /cloud-run-jobs-config.yaml
