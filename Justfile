@@ -43,7 +43,6 @@ dev *FLAGS: (env-check)
   fi
 
   {{docker}} run -it \
-    --env SHELL=/bin/sh \
     --env CHOKIDAR_USEPOLLING=true \
     --volume ./src:/cloud-run-jobs-emulator/src/ \
     --volume ./example/cloud-run-jobs-config.yaml:/cloud-run-jobs-config.yaml \
