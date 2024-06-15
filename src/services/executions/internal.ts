@@ -207,7 +207,15 @@ export const executions = {
         execution.updateTime = nowTimestamp();
         execution.runningCount = 1;
 
-        const timeoutMs = Number.parseInt((overriddenJob.template?.template?.timeout?.seconds ?? 0).toString()) * 1000 + Number.parseInt((overriddenJob.template?.template?.timeout?.nanos ?? 0).toString()) / 1_000_000;
+        const timeoutMs = (() => {
+          const timeout = overriddenJob.template?.template?.timeout;
+
+          if (!timeout) {
+            return 600_000;
+          }
+
+          return Number.parseInt((timeout.seconds ?? 0).toString()) * 1000 + Number.parseInt((timeout.nanos ?? 0).toString()) / 1_000_000;
+        })();
 
         const expiration = new Promise((_, reject) => {
           timeoutTimer = setTimeout(() => {
