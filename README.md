@@ -49,7 +49,7 @@ jobs:
 applicationDefaultCredentials: $HOME/.config/gcloud
 ```
 
-This directory will be mounted at `/gcp/config` in the conatiner. You can then specify the location of a service account key file to use for authentication:
+The provided `applicationDefaultCredentials` directory will be mounted at `/gcp/config` in the container. You can then specify the location of a service account key file to use for authentication:
 
 ```yaml
 jobs:
@@ -58,7 +58,17 @@ jobs:
     env:
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /gcp/config/service-account-creds.json # e.g. if the key file is in ~/.config/gcloud/service-account-creds.json
-applicationDefaultCredentials: $HOME/.config/gcloud
+applicationDefaultCredentials: $HOST_HOME/.config/gcloud
+```
+
+Note that if you use the `$HOST_HOME` environment variable or `~` as part of this path, you should also provide the environment variable to the emulator container. This can be done by adding the following to the `cloud-run-jobs-emulator` service in the `docker-compose.yaml` file:
+
+```yaml
+services:
+  cloud-run-jobs-emulator:
+    ...
+    environment:
+      HOST_HOME: $HOME  # or any other path
 ```
 
 Otherwise, you can use the [Cloud Run Jobs Client Library](https://cloud.google.com/nodejs/docs/reference/run/latest/run/v2.jobsclient#_google_cloud_run_v2_JobsClient_createJob_member_1_) to set up jobs dynamically (e.g. via a script) by pointing your client to the port of the running emulator.
@@ -68,4 +78,4 @@ Otherwise, you can use the [Cloud Run Jobs Client Library](https://cloud.google.
 - State -- such as registered jobs, executions -- are stored in-memory. This means that if the service is restarted, the state will be wiped fresh. In the longer term, we'd like to support a persistent volume or at least handle this on-disk in the container, so that it will survive container restarts.
 - Not all Cloud Run Job APIs are implemented, such as `Task`-related APIs. These will be added on an as-needed/as-requested basis. Please feel free to drop a PR!
 - `LongRunning` operations are not yet supported, so awaiting `.promise()` on a `createJob` calls (along with other methods that return a `LongRunningOperation`) will error.
-- `CreateJob` doesn't use any information from the specified template other than the image name. This will be expanded in the near future (🤞) to support the typical needs (e.g. volumes for Cloud SQL access).
+- `RunJob` only uses image and environment variables from the specified template. This will be expanded in the near future (🤞) to support the typical needs (e.g. volumes for Cloud SQL access).

@@ -4,4 +4,4 @@ jobs:
     env:
       - name: GOOGLE_APPLICATION_CREDENTIALS
         value: /gcp/config/service-account-creds.json
-applicationDefaultCredentials: $HOME/.config/gcloud
+applicationDefaultCredentials: $HOST_HOME/.config/gcloud

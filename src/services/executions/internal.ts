@@ -1,7 +1,6 @@
-import os from 'os';
 import path from 'path';
 import { protos } from '@google-cloud/run'
-import { NotFound, BadRequest, Conflict, InternalServerError, RequestTimeout } from 'http-errors';
+import { NotFound, BadRequest, InternalServerError, RequestTimeout } from 'http-errors';
 
 import { docker, streamContainerLogs } from '@utils/docker'
 import { Logger, getLogger } from '@utils/logger'
@@ -12,7 +11,6 @@ import { getConfig } from '@utils/config';
 const nowTimestamp = () => protos.google.protobuf.Timestamp.create({
   seconds: Math.floor(Date.now() / 1000)
 });
-
 
 const executionNamesByJobName = new Map<string, string[]>();
 const executionsStore = new Map<string, protos.google.cloud.run.v2.Execution>();
@@ -32,6 +30,104 @@ export const executions = {
       (execution): execution is protos.google.cloud.run.v2.Execution => !!execution
     ) ?? [];
   },
+  override: (job: protos.google.cloud.run.v2.IJob, overrides?: protos.google.cloud.run.v2.RunJobRequest.IOverrides) => {
+    const logger = getLogger(Logger.Execution);
+
+    logger.debug({ job, overrides }, 'execution.override');
+
+    if (!overrides) {
+      return job;
+    }
+
+    if (!job.template?.template?.containers?.length) {
+      throw new BadRequest('Invalid Job: template must have at least one container');
+    }
+
+    const applyContainerOverrides = (containerOverrides: protos.google.cloud.run.v2.RunJobRequest.Overrides.IContainerOverride[]): protos.google.cloud.run.v2.IJob => {
+      const overriddenJob = protos.google.cloud.run.v2.Job.create(job);
+
+      if (!containerOverrides.length) {
+        return overriddenJob;
+      }
+
+      if (containerOverrides.length > (overriddenJob.template?.template?.containers?.length ?? 0)) {
+        throw new BadRequest('Invalid Job: too many container overrides');
+      }
+
+      // https://cloud.google.com/php/docs/reference/cloud-run/latest/V2.RunJobRequest.Overrides.ContainerOverride
+      containerOverrides.forEach(({ name, args, env, clearArgs }, i) => {
+        const container = overriddenJob.template?.template?.containers?.[i];
+
+        if (!container) {
+          throw new BadRequest('Invalid Job: container override without container');
+        }
+
+        if (name) {
+          container.image = name;
+        }
+
+        if (args) {
+          container.args = args;
+        }
+
+        if (clearArgs) {
+          container.args = null;
+        }
+
+        if (env) {
+          container.env = Object.entries([
+            ...(container.env ?? []),
+            ...env
+          ].reduce(
+            (acc, { name, value }) => {
+              if (!name || !value) {
+                logger.warn({ envVar: name, value }, 'invalid env var');
+                return acc;
+              }
+              
+              acc[name] = value;
+              return acc;
+            },
+            {} as Record<string, string>
+          )).map(([name, value]) => ({ name, value }));
+        }
+      });
+
+      return overriddenJob;
+    }
+
+    const overriddenJob = applyContainerOverrides(overrides?.containerOverrides ?? []);
+
+    if (overrides?.taskCount && overrides.taskCount > 1) {
+      logger.warn({ taskCount: overrides.taskCount }, 'taskCount is not yet supported, running only one task');
+    }
+
+    if (overrides?.timeout) {
+      const { timeout: { seconds, nanos } } = overrides;
+
+      const secondsNumber = Number.parseInt((seconds ?? -1).toString());
+      const nanosNumber = Number.parseInt((nanos ?? -1).toString());
+
+      if (secondsNumber <= 0 || secondsNumber > 24 * 60 * 60) {
+        throw new BadRequest('Invalid Job: timeout must be between 0 and 24 hours');
+      }
+
+      if (nanosNumber < 0 || nanosNumber > 999_999_999) {
+        throw new BadRequest('Invalid Job: timeout nanos must be between 0 and 999,999,999');
+      }
+
+      if (!overriddenJob.template?.template) {
+        throw new BadRequest('Invalid Job: template is required');
+      }
+
+      overriddenJob.template.template.timeout = protos.google.protobuf.Duration.create({
+        seconds,
+        nanos
+      });
+    }
+
+    return overriddenJob;
+  },
   start: async (job: protos.google.cloud.run.v2.IJob, overrides?: protos.google.cloud.run.v2.RunJobRequest.IOverrides) => {
     const logger = getLogger(Logger.Execution);
 
@@ -45,70 +141,44 @@ export const executions = {
       logger.warn({ taskCount: overrides.taskCount }, 'taskCount is not yet supported, running only one task');
     }
 
-    const [containerTemplate] = job.template?.template?.containers ?? [];
-
-    if (!containerTemplate || !containerTemplate.image) {
+    if (!job.template?.template?.containers?.[0]?.image) {
       throw new BadRequest('Invalid Job: template must have at least one container with an image');
     }
 
+    const overriddenJob = executions.override(job, overrides ?? {});
+
+    // todo: add support for multiple containers
+    const [containerTemplate] = overriddenJob.template?.template?.containers ?? [];
+
     const options: Dockerode.ContainerCreateOptions = {
-      Image: containerTemplate.image,
+      Image: containerTemplate?.image ?? undefined,
       Env: containerTemplate.env?.map(({ name, value }) => `${name}=${value}`) ?? [],
     };
 
     const config = getConfig();
 
+    // If the job is configured to use GCP application default credentials, bind the host's GCP credentials directory to the container
+    // so that the container can authenticate with GCP services. Should be used in conjunction with GOOGLE_APPLICATION_CREDENTIALS env var
     if (config.applicationDefaultCredentials) {
       let gcpDirectory = config.applicationDefaultCredentials;
 
-      if (gcpDirectory.split(path.sep).includes('$HOME')) {
-        gcpDirectory = gcpDirectory.replace('$HOME', os.homedir());
+      const pathParts = gcpDirectory.split(path.sep);
+
+      if (pathParts.includes('$HOST_HOME')) {
+        if (!process.env.HOST_HOME) {
+          throw new InternalServerError('HOST_HOME not set');
+        }
+        
+        gcpDirectory = pathParts.map(part => part === '$HOST_HOME' ? process.env.HOST_HOME : part).join(path.sep);
       }
 
       options.HostConfig = {
-        Binds: [`${gcpDirectory}:/gcp/config:ro`], // Bind the volume with read-only flag
+        Binds: [`${gcpDirectory}:/gcp/config:ro`],
       }
     }
-
-    if (overrides?.containerOverrides) {
-      const envOverrides = overrides.containerOverrides.filter(({ env }) => env);
-
-      if (envOverrides.length > 0) {
-        options.Env = Object.entries([
-          ...(containerTemplate.env ?? []),
-          ...envOverrides.flatMap(({ env }) => env ?? []),
-        ].reduce(
-          (acc, { name, value }) => {
-            if (!name || !value) {
-              logger.warn({ envVar: name, value }, 'invalid env var');
-              return acc;
-            }
-            
-            acc[name] = value;
-            return acc;
-          },
-          {} as Record<string, string>
-        )).map(([name, value]) => `${name}=${value}`);
-      }
-
-      const clearArgs = overrides.containerOverrides.some(({ clearArgs }) => clearArgs);
-      
-      if (clearArgs) {
-        options.Cmd = [];
-      }
-
-      const argsOverrides = overrides.containerOverrides.filter(({ args }) => args);
-      if (argsOverrides.length > 0) {
-        // last one wins
-        options.Cmd = argsOverrides[argsOverrides.length - 1].args ?? [];
-      }
-    }
-
-    const timeout = Number.parseInt(overrides?.timeout?.seconds?.toString() ?? '600');
 
     const execution = protos.google.cloud.run.v2.Execution.create({
-      name: `${job.name}-${Date.now()}`,
-      // todo make sure overrides are applied to template, then to container earlier so they propagate here
+      name: `${job.name}/executions/${Date.now()}`,
       template: job.template?.template,
       createTime: nowTimestamp(),
       updateTime: nowTimestamp(),
@@ -137,13 +207,15 @@ export const executions = {
         execution.updateTime = nowTimestamp();
         execution.runningCount = 1;
 
+        const timeoutMs = Number.parseInt((overriddenJob.template?.template?.timeout?.seconds ?? 0).toString()) * 1000 + Number.parseInt((overriddenJob.template?.template?.timeout?.nanos ?? 0).toString()) / 1_000_000;
+
         const expiration = new Promise((_, reject) => {
           timeoutTimer = setTimeout(() => {
             execution.expireTime = nowTimestamp();
             execution.updateTime = nowTimestamp();
 
-            reject(new RequestTimeout(`job ${execution.name} timed out after ${timeout} seconds`));
-          }, timeout * 1000);
+            reject(new RequestTimeout(`job ${execution.name} timed out after ${timeoutMs.toFixed(6)}ms`));
+          }, timeoutMs);
         });
 
         container.start();
