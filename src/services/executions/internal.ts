@@ -53,6 +53,7 @@ export const executions = {
 
     const options: Dockerode.ContainerCreateOptions = {
       Image: containerTemplate.image,
+      Env: containerTemplate.env?.map(({ name, value }) => `${name}=${value}`) ?? [],
     };
 
     const config = getConfig();
