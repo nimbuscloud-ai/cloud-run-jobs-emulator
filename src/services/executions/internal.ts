@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import { protos } from '@google-cloud/run'
 import { NotFound, BadRequest, Conflict, InternalServerError, RequestTimeout } from 'http-errors';
 
@@ -56,8 +58,14 @@ export const executions = {
     const config = getConfig();
 
     if (config.applicationDefaultCredentials) {
+      let gcpDirectory = config.applicationDefaultCredentials;
+
+      if (gcpDirectory.split(path.sep).includes('$HOME')) {
+        gcpDirectory = gcpDirectory.replace('$HOME', os.homedir());
+      }
+
       options.HostConfig = {
-        Binds: [`${config.applicationDefaultCredentials}:/gcp/config:ro`], // Bind the volume with read-only flag
+        Binds: [`${gcpDirectory}:/gcp/config:ro`], // Bind the volume with read-only flag
       }
     }
 
