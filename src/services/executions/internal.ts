@@ -102,8 +102,6 @@ export const executions = {
     const container = await docker.createContainer(options);
     runningContainersByExecutionName.set(execution.name, container);
 
-    streamContainerLogs(container, logger, execution.name);
-
     const startExecution = async () => {
       const waitForCompletion = async () => {
         const { StatusCode } = await container.wait();
@@ -128,6 +126,9 @@ export const executions = {
             reject(new RequestTimeout(`job ${execution.name} timed out after ${timeout} seconds`));
           }, timeout * 1000);
         });
+
+        container.start();
+        streamContainerLogs(container, logger, execution.name);
 
         await Promise.race([
           waitForCompletion()
