@@ -12,6 +12,7 @@ export class Config {
   jobs: {
     [name: string]: {
       image: string;
+      command?: string[];
       env?: {
         name: string;
         value: string;

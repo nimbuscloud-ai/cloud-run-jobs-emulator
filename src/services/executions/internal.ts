@@ -105,10 +105,10 @@ export const executions = {
     if (overrides?.timeout) {
       const { timeout: { seconds, nanos } } = overrides;
 
-      const secondsNumber = Number.parseInt((seconds ?? -1).toString());
-      const nanosNumber = Number.parseInt((nanos ?? -1).toString());
+      const secondsNumber = Number.parseInt((seconds ?? 0).toString());
+      const nanosNumber = Number.parseInt((nanos ?? 0).toString());
 
-      if (secondsNumber <= 0 || secondsNumber > 24 * 60 * 60) {
+      if (secondsNumber < 0 || secondsNumber > 24 * 60 * 60) {
         throw new BadRequest('Invalid Job: timeout must be between 0 and 24 hours');
       }
 
@@ -152,6 +152,8 @@ export const executions = {
 
     const options: Dockerode.ContainerCreateOptions = {
       Image: containerTemplate?.image ?? undefined,
+      Entrypoint: containerTemplate?.command ?? undefined,
+      Cmd: containerTemplate?.args ?? undefined,
       Env: containerTemplate.env?.map(({ name, value }) => `${name}=${value}`) ?? [],
     };
 
@@ -187,7 +189,7 @@ export const executions = {
     executionsStore.set(execution.name, execution);
     executionNamesByJobName.set(job.name, [...(executionNamesByJobName.get(job.name) ?? []), execution.name]);
     
-    logger.debug({ executionName: execution.name }, `creating container for execution ${execution.name}`, { options });
+    logger.debug({ options }, `creating container for execution ${execution.name}`);
     const container = await docker.createContainer(options);
     runningContainersByExecutionName.set(execution.name, container);
 

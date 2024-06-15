@@ -35,8 +35,10 @@ jobs:
     image: my-docker-image:tag
   another-great-job:
     image: my-docker-image:tag
-    # env is optional list of key-value pairs
-    env: 
+    command:
+      - node
+      - my-script.js
+    env:
       - key: SOME_ENV_VAR
         value: some-value
 ```
@@ -55,6 +57,9 @@ The provided `applicationDefaultCredentials` directory will be mounted at `/gcp/
 jobs:
   my-job-using-adc:
     image: my-docker-image:tag
+    command:
+      - node
+      - my-script.js
     env:
       - key: GOOGLE_APPLICATION_CREDENTIALS
         value: /gcp/config/service-account-creds.json # e.g. if the key file is in ~/.config/gcloud/service-account-creds.json
@@ -78,4 +83,5 @@ Otherwise, you can use the [Cloud Run Jobs Client Library](https://cloud.google.
 - State -- such as registered jobs, executions -- are stored in-memory. This means that if the service is restarted, the state will be wiped fresh. In the longer term, we'd like to support a persistent volume or at least handle this on-disk in the container, so that it will survive container restarts.
 - Not all Cloud Run Job APIs are implemented, such as `Task`-related APIs. These will be added on an as-needed/as-requested basis. Please feel free to drop a PR!
 - `LongRunning` operations are not yet supported, so awaiting `.promise()` on a `createJob` calls (along with other methods that return a `LongRunningOperation`) will error.
-- `RunJob` only uses image and environment variables from the specified template. This will be expanded in the near future (🤞) to support the typical needs (e.g. volumes for Cloud SQL access).
+- The configuration only supports image, environment variables, and command specification. This will continue to expand as needed.
+- `RunJob` is only using the image, environment variables, and entrypoint/command during execution at the moment.
