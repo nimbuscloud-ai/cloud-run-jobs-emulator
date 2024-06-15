@@ -2,7 +2,7 @@
   "name": "cloud-run-jobs-emulator",
   "version": "0.0.0",
   "engines": {
-    "node": ">=21",
+    "node": ">=20",
     "npm": ">=10"
   },
   "scripts": {
@@ -13,11 +13,11 @@
     "test": "npx jest"
   },
   "dependencies": {
-    "@google-cloud/run": "^1.0.2",
+    "@google-cloud/run": "^1.3.0",
     "@grpc/grpc-js": "^1.9.9",
     "@grpc/proto-loader": "^0.7.10",
     "dockerode": "^4.0.0",
-    "google-proto-files": "^4.0.0",
+    "google-proto-files": "^4.2.0",
     "http-errors": "^2.0.0",
     "pino": "^8.16.1",
     "yaml": "^2.3.3",
