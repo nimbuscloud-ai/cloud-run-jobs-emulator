@@ -1,3 +1,7 @@
 jobs:
   hello-world:
     image: hello-world:latest
+    env:
+      - name: GOOGLE_APPLICATION_CREDENTIALS
+        value: /gcp/config/service-account-creds.json
+applicationDefaultCredentials: $HOME/.config/gcloud

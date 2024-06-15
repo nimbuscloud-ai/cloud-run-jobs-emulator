@@ -35,6 +35,30 @@ jobs:
     image: my-docker-image:tag
   another-great-job:
     image: my-docker-image:tag
+    # env is optional list of key-value pairs
+    env: 
+      - key: SOME_ENV_VAR
+        value: some-value
+```
+
+If your container needs to use Application Default Credentials (ADC) to authenticate with Google Cloud, you can mount your `~/.config/gcloud` directory into the emulator container via the configuration file
+
+```yaml
+jobs:
+  ...
+applicationDefaultCredentials: $HOME/.config/gcloud
+```
+
+This directory will be mounted at `/gcp/config` in the conatiner. You can then specify the location of a service account key file to use for authentication:
+
+```yaml
+jobs:
+  my-job-using-adc:
+    image: my-docker-image:tag
+    env:
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /gcp/config/service-account-creds.json # e.g. if the key file is in ~/.config/gcloud/service-account-creds.json
+applicationDefaultCredentials: $HOME/.config/gcloud
 ```
 
 Otherwise, you can use the [Cloud Run Jobs Client Library](https://cloud.google.com/nodejs/docs/reference/run/latest/run/v2.jobsclient#_google_cloud_run_v2_JobsClient_createJob_member_1_) to set up jobs dynamically (e.g. via a script) by pointing your client to the port of the running emulator.

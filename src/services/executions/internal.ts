@@ -4,6 +4,7 @@ import { NotFound, BadRequest, Conflict, InternalServerError, RequestTimeout } f
 import { docker, streamContainerLogs } from '@utils/docker'
 import { Logger, getLogger } from '@utils/logger'
 import Dockerode from 'dockerode'
+import { getConfig } from '@utils/config';
 
 
 const nowTimestamp = () => protos.google.protobuf.Timestamp.create({
@@ -32,7 +33,7 @@ export const executions = {
   start: async (job: protos.google.cloud.run.v2.IJob, overrides?: protos.google.cloud.run.v2.RunJobRequest.IOverrides) => {
     const logger = getLogger(Logger.Execution);
 
-    logger.debug({ job }, 'execution.create');
+    logger.debug({ job, overrides }, 'execution.create');
 
     if (!job.name) {
       throw new BadRequest('Invalid Job for Execution: name is required');
@@ -51,6 +52,14 @@ export const executions = {
     const options: Dockerode.ContainerCreateOptions = {
       Image: containerTemplate.image,
     };
+
+    const config = getConfig();
+
+    if (config.applicationDefaultCredentials) {
+      options.HostConfig = {
+        Binds: [`${config.applicationDefaultCredentials}:/gcp/config:ro`], // Bind the volume with read-only flag
+      }
+    }
 
     if (overrides?.containerOverrides) {
       const envOverrides = overrides.containerOverrides.filter(({ env }) => env);
@@ -99,6 +108,7 @@ export const executions = {
     executionsStore.set(execution.name, execution);
     executionNamesByJobName.set(job.name, [...(executionNamesByJobName.get(job.name) ?? []), execution.name]);
     
+    logger.debug({ executionName: execution.name }, `creating container for execution ${execution.name}`, { options });
     const container = await docker.createContainer(options);
     runningContainersByExecutionName.set(execution.name, container);
 

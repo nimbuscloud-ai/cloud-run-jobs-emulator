@@ -18,7 +18,8 @@ const configToJob = ([jobName, jobConfig]: [string, ReturnType<typeof getConfig>
     template: protos.google.cloud.run.v2.ExecutionTemplate.create({
       template: protos.google.cloud.run.v2.TaskTemplate.create({
         containers: [protos.google.cloud.run.v2.Container.create({
-          image: jobConfig.image
+          image: jobConfig.image,
+          env: jobConfig.env
         })]
       })
     })

@@ -11,9 +11,15 @@ export class Config {
 
   jobs: {
     [name: string]: {
-      image: string
+      image: string;
+      env?: {
+        name: string;
+        value: string;
+      }[];
     }
   } = {}
+
+  applicationDefaultCredentials?: string;
 
   constructor () {
     const logger = getLogger()
