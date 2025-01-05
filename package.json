@@ -10,7 +10,8 @@
     "dev:build": "npx swc ./src -d ./dist --watch --log-watch-compilation",
     "dev:run": "npx chokidar \"dist/**/*.js\" --initial --command \"pkill -xf 'node dist/main.js --config /cloud-run-jobs-config.yaml'; node dist/main.js --config /cloud-run-jobs-config.yaml\"",
     "build": "npx swc ./src -d ./dist",
-    "test": "npx jest"
+    "test": "npx jest",
+    "publish-container": "just build && docker tag mattkindynimbus/cloud-run-jobs-emulator:dev mattkindynimbus/cloud-run-jobs-emulator:latest && docker push mattkindynimbus/cloud-run-jobs-emulator:latest"
   },
   "dependencies": {
     "@google-cloud/run": "^1.3.0",

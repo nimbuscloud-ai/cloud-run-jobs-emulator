@@ -12,7 +12,7 @@ RUN npm install
 
 # ---
 
-FROM base as build
+FROM base AS build
 COPY --from=dependencies ${ROOT_PATH}/ ${ROOT_PATH}/
 COPY --chown=node:node ./.swcrc ${ROOT_PATH}/
 COPY --chown=node:node ./src/ ${ROOT_PATH}/src/
@@ -20,7 +20,7 @@ RUN npm run build
 
 # ---
 
-FROM base as runtime-dev
+FROM base AS runtime-dev
 RUN apt-get update -y && \
     apt-get install -y procps
 COPY --from=build ${ROOT_PATH}/ ${ROOT_PATH}/
@@ -29,5 +29,5 @@ CMD [ "run", "dev" ]
 
 # ---
 
-FROM base as runtime
+FROM base AS runtime
 COPY --from=build ${ROOT_PATH} ${ROOT_PATH}

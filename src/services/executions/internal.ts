@@ -155,6 +155,23 @@ export const executions = {
       Entrypoint: containerTemplate?.command ?? undefined,
       Cmd: containerTemplate?.args ?? undefined,
       Env: containerTemplate.env?.map(({ name, value }) => `${name}=${value}`) ?? [],
+      ...(containerTemplate?.ports ? { 
+        ExposedPorts: Object.fromEntries(
+          containerTemplate?.ports
+            ?.filter((port): port is typeof port & { containerPort: number } => !!port.containerPort)
+            .map(({ containerPort }) => [`${containerPort}/tcp`, {}])
+        ),
+        HostConfig: {
+          PortBindings: Object.fromEntries(
+            containerTemplate?.ports
+              ?.filter((port): port is typeof port & { containerPort: number } => !!port.containerPort)
+              .map(({ containerPort }) => [
+                `${containerPort}/tcp`, 
+                [{ HostPort: containerPort.toString() }]
+              ])
+          )
+        }
+      } : {}),
     };
 
     const config = getConfig();
@@ -175,6 +192,7 @@ export const executions = {
       }
 
       options.HostConfig = {
+        ...(options.HostConfig ?? {}),
         Binds: [`${gcpDirectory}:/gcp/config:ro`],
       }
     }
